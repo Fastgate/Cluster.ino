@@ -391,12 +391,12 @@ void canCallback(const CAN_message_t &message) {
         }
       break;
       */
-      case (0x060D):
+      case (0x0233):
 
-       message0551.buf[5] = transferFlag(message.buf[1], B00000110, message0551.buf[5], B01000000);
+       message0551.buf[5] = transferFlag(message.buf[3], B00000010, message0551.buf[5], B01010000);
 
        can.write(message0551);
-      Serial.println(message0551.buf[5]);
+      //Serial.println(message0551.buf[5], HEX);
       
      break;
      
