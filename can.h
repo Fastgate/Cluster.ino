@@ -87,7 +87,7 @@ public:
             if (this->canIds[i] == this->msg.id) {
             //Serial.println(this->msg.id, HEX);
             this->write(this->msg);
-            return;
+            //return;
           }
           }
 

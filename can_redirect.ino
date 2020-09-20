@@ -177,7 +177,7 @@ void setup() {
   
 
 
-
+message0551.buf[5]= B01010000;
 
 }
 
@@ -365,7 +365,7 @@ void canCallback(const CAN_message_t &message) {
       //message0215.buf[0] = B00000001;
 
       can.write(message180);
-      can.write(message551);
+      //can.write(message551);
       //can.write(message060D);
       //can.write(message0215);
       // ID 551 [5] = Cruise Set
@@ -393,10 +393,10 @@ void canCallback(const CAN_message_t &message) {
       */
       case (0x060D):
 
-       message0551.buf[5] = transferFlag(message.buf[0], B00001000, message0551.buf[5], B01000000);
+       message0358.buf[4] = transferFlag(message.buf[0], B00001000, message0358.buf[4], B10000000);
 
-       can.write(message551);
-      Serial.println("geht");
+       can.write(message0358);
+      Serial.println(message0358.buf[4]);
       
      break;
      
@@ -426,7 +426,7 @@ uint8_t transferFlag(uint8_t sourceValue, uint8_t sourceMask, uint8_t targetValu
 }
 
 bool readFlag(uint8_t value, uint8_t mask) {
-  return (value & mask) == mask;
+  return mask ==(value & mask);
 }
 
 bool setFlag(uint8_t value, uint8_t mask) {
