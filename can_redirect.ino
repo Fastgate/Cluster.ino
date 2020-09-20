@@ -67,8 +67,8 @@ void setup() {
   can.addCanId(0x01F9);
   can.addCanId(0x0215);
   can.addCanId(0x0216);
-  can.addCanId(0x0233);
-  can.addCanId(0x023D);
+  //can.addCanId(0x0233);
+  //can.addCanId(0x023D);
 
   can.addCanId(0x0245);
   can.addCanId(0x0280);
@@ -350,7 +350,7 @@ void loop() {
 
 void canCallback(const CAN_message_t &message) {
   switch (message.id) {
-    case (0x023D):
+    case (0x023D):{
       uint16_t rpm = combineUint16(message.buf[3], message.buf[4]) * 2.3 * 10;
       message180.buf[0] = highUint16(rpm);
       message180.buf[1] = lowUint16(rpm);
@@ -369,9 +369,9 @@ void canCallback(const CAN_message_t &message) {
       can.write(message060D);
       //can.write(message0215);
       // ID 551 [5] = Cruise Set
-       Serial.println("geht");
+       }
       break;
-    case (0x060D):
+   /* case (0x060D):
 
       if (message060D.buf[0] = B00001000){
       message0358.buf[4] = B10000000; // Rear Fog Lamp
@@ -390,18 +390,16 @@ void canCallback(const CAN_message_t &message) {
       can.write(message0358);
         }
       break;
-      
+      */
       case (0x0233):
 
-      uint8_t ASCD =
-     if (message0233.buf[3] = B00000010){
-        message0551.buf[5] = B01010000;
-      Serial.println("geht");
-        can.write(message551);
-      }//can.write(message551);
+       message0551.buf[5] = transferFlag(message.buf[3], B00000010, message0551.buf[5], B01000000);
 
-      Serial.println("geht nicht");
+       can.write(message551);
+      Serial.println("geht");
+      
      break;
+     
   }
 }
 
@@ -421,4 +419,20 @@ void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer
       can.stopSniffer();
     }
   }
+}
+
+uint8_t transferFlag(uint8_t sourceValue, uint8_t sourceMask, uint8_t targetValue, uint8_t targetMask) {
+  return readFlag(sourceValue, sourceMask) ? setFlag(targetValue, targetMask) : clearFlag(targetValue, targetMask);
+}
+
+bool readFlag(uint8_t value, uint8_t mask) {
+  return (value & mask) == mask;
+}
+
+bool setFlag(uint8_t value, uint8_t mask) {
+  return value | mask;
+}
+
+bool clearFlag(uint8_t value, uint8_t mask) {
+  return value ^ ~ mask;
 }
