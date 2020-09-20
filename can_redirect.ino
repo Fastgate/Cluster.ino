@@ -434,5 +434,5 @@ uint8_t setFlag(uint8_t value, uint8_t mask) {
 }
 
 uint8_t clearFlag(uint8_t value, uint8_t mask) {
-  return value ^ ~ mask;
+  return value & (mask ^ 0xFF);
 }
