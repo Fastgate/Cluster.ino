@@ -429,10 +429,10 @@ bool readFlag(uint8_t value, uint8_t mask) {
   return mask ==(value & mask);
 }
 
-bool setFlag(uint8_t value, uint8_t mask) {
+uint8_t setFlag(uint8_t value, uint8_t mask) {
   return value | mask;
 }
 
-bool clearFlag(uint8_t value, uint8_t mask) {
+uint8_t clearFlag(uint8_t value, uint8_t mask) {
   return value ^ ~ mask;
 }
