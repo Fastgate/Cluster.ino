@@ -62,7 +62,7 @@ void setup() {
   // Add all can packets that should be redirected without change
   can.addCanId(0x0002);
   can.addCanId(0x0160);
-  can.addCanId(0x0180);
+  //can.addCanId(0x0180);
   can.addCanId(0x0182);
   can.addCanId(0x01F9);
   can.addCanId(0x0215);
@@ -366,7 +366,7 @@ void canCallback(const CAN_message_t &message) {
 
       can.write(message180);
       can.write(message551);
-      can.write(message060D);
+      //can.write(message060D);
       //can.write(message0215);
       // ID 551 [5] = Cruise Set
        }
@@ -391,9 +391,9 @@ void canCallback(const CAN_message_t &message) {
         }
       break;
       */
-      case (0x0233):
+      case (0x060D):
 
-       message0551.buf[5] = transferFlag(message.buf[3], B00000010, message0551.buf[5], B01000000);
+       message0551.buf[5] = transferFlag(message.buf[0], B00001000, message0551.buf[5], B01000000);
 
        can.write(message551);
       Serial.println("geht");
