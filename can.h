@@ -75,10 +75,10 @@ public:
             return;
         }
         if (this->sourceCan->read(this->msg)) {
-          if (this->msg.id == 0x0233) 
+          /*if (this->msg.id == 0x0551) 
           {
-           Serial.println(this->msg.buf[3], HEX);
-          }
+           //Serial.println(this->msg.buf[5], HEX);
+          }*/
           if (this->isSniffing) {
             this->sniff(this->msg);
           }

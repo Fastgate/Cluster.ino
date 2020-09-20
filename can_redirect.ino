@@ -364,7 +364,7 @@ void canCallback(const CAN_message_t &message) {
       //message060D.buf[1] = B01111111;
       //message0215.buf[0] = B00000001;
 
-      can.write(message180);
+      //can.write(message180);
       //can.write(message551);
       //can.write(message060D);
       //can.write(message0215);
@@ -393,10 +393,10 @@ void canCallback(const CAN_message_t &message) {
       */
       case (0x060D):
 
-       message0358.buf[4] = transferFlag(message.buf[0], B00001000, message0358.buf[4], B10000000);
+       message0551.buf[5] = transferFlag(message.buf[1], B00000110, message0551.buf[5], B01000000);
 
-       can.write(message0358);
-      Serial.println(message0358.buf[4]);
+       can.write(message0551);
+      Serial.println(message0551.buf[5]);
       
      break;
      
