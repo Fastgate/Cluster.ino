@@ -1,5 +1,11 @@
+#include <Arduino.h>
+
 #include <carduinotest.h>
 #include "can.h"
+
+#include <arduinoIO.h>
+
+#include "Bcm.h"
 
 #define combineUint16(L, H) (H * 256 + L)
 #define highUint16(V) (V >> 8)
@@ -9,6 +15,24 @@
 void canCallback(const CAN_message_t &message);
 void onCarduinoSerialTimeout();
 void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer);
+
+u_int8_t transferFlag(uint8_t sourceValue, uint8_t sourceMask, uint8_t targetValue, uint8_t targetMask);
+bool readFlag(uint8_t value, uint8_t mask);
+uint8_t setFlag(uint8_t value, uint8_t mask);
+uint8_t clearFlag(uint8_t value, uint8_t mask);
+
+
+Button rearFogButton(new AnalogInput(A5, 220, 400), 0);
+
+void updateRearFog();
+void updateBcm(Button *headlightWasherButton, Bcm *bcm);
+Bcm bcm;
+
+
+CanInput headlightSensor    (0x060D, 0, B00000110);  
+CanInput runningLightSensor (0x060D, 0, B00000100);
+CanInput frontFogLight      (0x060D, 1, B00000001);
+CanInput rearFogLight       (0x0358, 4, B10000000); // Rear Fog Lamp
 
 Can can(&Serial);
 Carduino carduino(&Serial, onCarduinoSerialEvent, onCarduinoSerialTimeout);
@@ -163,9 +187,8 @@ void setup() {
   message06F1.id = 0x06F1;
   message06F1.len = 8;
 
-//message0551.buf[5]= B01010000;
-
 can.startSniffer();
+
 
 }
 
@@ -174,12 +197,12 @@ void loop() {
      
       can.update(canCallback);
 
-    }
+    }    
 
-
-      
-     
-      
+  bcm.update(updateBcm);  
+  
+  updateRearFog();
+   
       
 //////////////////////// ID 0x0351 ///////////////////////////      
       
@@ -256,8 +279,6 @@ void loop() {
       //can.write(message060D);
       
   
-
-  
 }
 
 
@@ -275,26 +296,27 @@ void canCallback(const CAN_message_t &message) {
       
       }
       break;
-   /* case (0x060D):
+    case (0x060D):
 
-      if (message060D.buf[0] = B00001000){
-      message0358.buf[4] = B10000000; // Rear Fog Lamp
-      message0358.buf[1] = B00011000;
-      message0358.buf[0] = B00000001;
+      if (message060D.buf[1] = B00000110 && message060D.buf[0] = B00000110){
+        
+      //message0358.buf[4] = B10000000; // Rear Fog Lamp
+      //message0358.buf[1] = B00011000;
+      //message0358.buf[0] = B00000001;
      
-      message0358.buf[3] = B00100000;
-      message0385.buf[0] = B00000010;  // TPMS ERROR
+      //message0358.buf[3] = B00100000;
+      //message0385.buf[0] = B00000010;  // TPMS ERROR
       
       can.write(message0358);
-      can.write(message0385);
+      //can.write(message0385);
       
-      }else{
-         message0358.buf[4] = B00000000;
+      //}else{
+        // message0358.buf[4] = B00000000;
       
-      can.write(message0358);
+      //can.write(message0358);
         }
       break;
-      */
+      
       case (0x0233):
 
        message0551.buf[5] = transferFlag(message.buf[3], B00000010, message0551.buf[5], B01010000);
@@ -305,9 +327,9 @@ void canCallback(const CAN_message_t &message) {
       
      break;
      
+  
   }
 }
-
 void onCarduinoSerialTimeout() {
   carduino.end();
   delay(1000);
@@ -326,7 +348,7 @@ void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer
   }
 }
 
-uint8_t transferFlag(uint8_t sourceValue, uint8_t sourceMask, uint8_t targetValue, uint8_t targetMask) {
+u_int8_t transferFlag(uint8_t sourceValue, uint8_t sourceMask, uint8_t targetValue, uint8_t targetMask) {
   return readFlag(sourceValue, sourceMask) ? setFlag(targetValue, targetMask) : clearFlag(targetValue, targetMask);
 }
 
@@ -340,4 +362,31 @@ uint8_t setFlag(uint8_t value, uint8_t mask) {
 
 uint8_t clearFlag(uint8_t value, uint8_t mask) {
   return value & (mask ^ 0xFF);
+}
+
+
+void updateRearFog(){
+  rearFogButton.update();
+  
+
+  if (headlightSensor.getState() && frontFogLight.getState()){
+    if (rearFogButton.wasHeldFor(500)) {
+      bcm.toggleRearFogLight();
+      message0358.buf[4] = B10000000; // Rear Fog Lamp
+      can.write(message0358);
+    }
+  }
+  if (!frontFogLight.getState() && bcm.isRearFogLightActive()) {
+    bcm.toggleRearFogLight();
+  }
+}
+
+void updateBcm(Button *headlightWasherButton, Bcm *bcm) {
+  
+
+  // headlight washer
+  if (headlightSensor.getState() && headlightWasherButton->wasHeldFor(500)) {
+    bcm->washHeadlights(1200);
+  }
+
 }

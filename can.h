@@ -14,6 +14,37 @@ static SerialPacket canSendTimeout(0x65, 0x34);
 
 static SerialPacket canControlError(0x65, 0x35);
 
+struct CanData {
+  union {
+    unsigned char data[4];
+    BitFieldMember<0, 32> canId;
+  } metaData;
+  uint8_t rxBuf[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+};
+
+class CanInput { 
+  public:
+    CanInput(uint32_t canId, uint8_t byteNumber, uint8_t bitMask) {
+      this->canId       = canId;
+      this->byteNumber  = byteNumber;
+      this->bitMask     = bitMask;
+    }
+    virtual boolean getState() { 
+      return this->state;
+    }
+    void update(const CAN_message_t &message) {
+      if (message.id == this->canId) {
+        this->state = message.len >= this->byteNumber + 1 && (message.buf[this->byteNumber] & this->bitMask) == this->bitMask;
+      }
+    }
+  private:
+    uint32_t canId      = 0;
+    uint8_t byteNumber  = 0;
+    uint8_t bitMask     = B00000000;
+    
+    boolean state       = false;
+};
+
 class Can {
 public:
     Can(Stream * serial) {
@@ -37,6 +68,7 @@ public:
         this->isInitialized = true;
         return this->isInitialized;
     }
+
 
     void startSniffer() {
         this->isSniffing = true;
@@ -79,6 +111,7 @@ public:
           {
            //Serial.println(this->msg.buf[5], HEX);
           }*/
+          
           if (this->isSniffing) {
             this->sniff(this->msg);
           }
@@ -124,6 +157,7 @@ private:
     boolean isInitialized = false;
     boolean isSniffing = false;
 
+    
     void sniff(const CAN_message_t &message) {
         uint32_t flippedCanId = htonl(message.id);
         this->serial->write("{");
