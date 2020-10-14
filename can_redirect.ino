@@ -298,7 +298,7 @@ void canCallback(const CAN_message_t &message) {
       break;
     case (0x060D):
 
-      if (message060D.buf[1] = B00000110 && message060D.buf[0] = B00000110){
+      //if (message060D.buf[1] = B00000110 && message060D.buf[0] = B00000110){
         
       //message0358.buf[4] = B10000000; // Rear Fog Lamp
       //message0358.buf[1] = B00011000;
@@ -307,15 +307,15 @@ void canCallback(const CAN_message_t &message) {
       //message0358.buf[3] = B00100000;
       //message0385.buf[0] = B00000010;  // TPMS ERROR
       
-      can.write(message0358);
+      //can.write(message0358);
       //can.write(message0385);
       
       //}else{
         // message0358.buf[4] = B00000000;
       
       //can.write(message0358);
-        }
-      break;
+       // }
+      //break;
       
       case (0x0233):
 
