@@ -15,6 +15,7 @@
 void canCallback(const CAN_message_t &message);
 void onCarduinoSerialTimeout();
 void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer);
+void shiftGauge();
 
 u_int8_t transferFlag(uint8_t sourceValue, uint8_t sourceMask, uint8_t targetValue, uint8_t targetMask);
 bool readFlag(uint8_t value, uint8_t mask);
@@ -22,6 +23,8 @@ uint8_t setFlag(uint8_t value, uint8_t mask);
 uint8_t clearFlag(uint8_t value, uint8_t mask);
 
 
+DigitalInput pnpSwitch(2, 20, HIGH, INPUT);
+DigitalInput reverseSwitch(3, 20, HIGH, INPUT);
 Button rearFogButton(new AnalogInput(A5, 220, 400), 0);
 
 void updateRearFog();
@@ -32,7 +35,10 @@ Bcm bcm;
 CanInput headlightSensor    (0x060D, 0, B00000110);  
 CanInput runningLightSensor (0x060D, 0, B00000100);
 CanInput frontFogLight      (0x060D, 1, B00000001);
-CanInput rearFogLight       (0x0358, 4, B10000000); // Rear Fog Lamp
+CanInput rearFogLight       (0x0358, 4, B10000000); 
+CanInput handbrakeSensor    (0x06F1, 4, B00010000);
+CanInput ignitionAcc        (0x060D, 1, B00000010);
+CanInput ignitionOn         (0x060D, 1, B00000110);
 
 Can can(&Serial);
 Carduino carduino(&Serial, onCarduinoSerialEvent, onCarduinoSerialTimeout);
@@ -202,6 +208,8 @@ void loop() {
   bcm.update(updateBcm);  
   
   updateRearFog();
+
+
    
       
 //////////////////////// ID 0x0351 ///////////////////////////      
@@ -296,10 +304,10 @@ void canCallback(const CAN_message_t &message) {
       
       }
       break;
-    case (0x060D):
+    //case (0x060D):
 
-      //if (message060D.buf[1] = B00000110 && message060D.buf[0] = B00000110){
-        
+      
+      message0351.buf[5] = B00001111; //Push Brake and Start Button to drive
       //message0358.buf[4] = B10000000; // Rear Fog Lamp
       //message0358.buf[1] = B00011000;
       //message0358.buf[0] = B00000001;
@@ -329,6 +337,28 @@ void canCallback(const CAN_message_t &message) {
      
   
   }
+}
+
+void shiftGauge(){
+  if (ignitionAcc.getState() || ignitionOn.getState()){ 
+
+    if(!handbrakeSensor.getState()){
+      
+      if(!reverseSwitch.getState() && pnpSwitch.getState()){
+        message0421.buf[0] = B00101000; // D S
+        message0421.buf[0] = B00001001; // O/D OFF ---> Sport
+        can.write(message0421);
+      }else if(!pnpSwitch.getState() && reverseSwitch.getState()){
+        if(handbrakeSensor.getState()){
+          message0421.buf[0] = B00001000; // P
+          can.write(message0421);  
+        }
+        message0421.buf[0] = B00010000; // R
+        can.write(message0421);
+      }
+    }
+  }   message0421.buf[0] = B00011000; // N
+      can.write(message0421);  
 }
 void onCarduinoSerialTimeout() {
   carduino.end();
