@@ -8,6 +8,31 @@ class Bcm {
   public:
     Bcm() {}
     
+  //////////////////////////////////////////////
+ ///////////////// DOOR SWITCH ////////////////
+//////////////////////////////////////////////    
+    boolean isFLDoorOpen() {
+      return this->FLDoorSensor->getState();
+    }
+    boolean isFRDoorOpen() {
+      return this->FRDoorSensor->getState();
+    }
+    boolean isRLDoorOpen() {
+      return this->RLDoorSensor->getState();
+    }
+    boolean isRRDoorOpen() {
+      return this->RRDoorSensor->getState();
+    }
+    boolean isBackDoorOpen() {
+      return this->backDoorSensor->getState();
+    }
+    boolean isAnyDoorOpen() {
+      return this->isFLDoorOpen() || this->isFRDoorOpen() || this->isRLDoorOpen() || this->isRRDoorOpen() || this->isBackDoorOpen();
+    }
+  //////////////////////////////////////////////////////  
+ ////////////////// REAR FOG //////////////////////////
+////////////////////////////////////////////////////// 
+    
     void toggleRearFogLight() {
       this->RearFogRelay->toggle(!this->RearFogRelay->getState());
     }
@@ -16,9 +41,55 @@ class Bcm {
       //message0358.buf[4] = B10000000; // Rear Fog Lamp
       //can.write(message0358);
     }
+  //////////////////////////////////////////////////   
+ ////////// KEYLESS ENTRY ///////////////////////// 
+/////////////////////////////////////////////////
+
+    boolean isBluetoothConnected() {
+      return this->BluetoothConnected->getState() ==HIGH;
+    }
+    boolean isClutchSwitchActive() {
+      return this->ClutchSwitch->getState();
+    }
+    boolean isstatusLEDActive() {
+      return this->statusLED->getState() == HIGH;
+    }
+    void setstatusLED(boolean newState) {
+      this->statusLED->toggle(!this->statusLED->getState());
+    }
+    boolean isNatsRlyActive() {
+      return this->NatsRLY->getState() == HIGH;
+    }
+    void setNatsRLY(boolean newState) {
+      this->NatsRLY->toggle(!this->NatsRLY->getState());
+    }
+    boolean isStartFreeRelayActive(){
+      return this->StartFreeRelay->getState() == HIGH;
+    }
+    void setStartFreeRelay(boolean newState) {
+      this->StartFreeRelay->toggle(!this->StartFreeRelay->getState());
+    }
+  /////////////////////////////////////////////////////////////////    
+ ////////// Door Switch for Keyless Entry //////////////////////// 
+///////////////////////////////////////////////////////////////// 
+    boolean isDoorswitchActive(){
+      return this->DoorSwitch->getState() == HIGH;
+    }
+    void setDoorSwitch(boolean newState) {
+      this->DoorSwitch->toggle(!this->DoorSwitch->getState());
+    }
+    
     
     void washHeadlights(unsigned int duration) {
       this->headlightWasherRelay->set(HIGH, duration);
+    }
+
+    void updateCan(CAN_message_t canMessage) {
+      this->FLDoorSensor->update(canMessage);
+      this->FRDoorSensor->update(canMessage);
+      this->RLDoorSensor->update(canMessage);
+      this->RRDoorSensor->update(canMessage);
+           
     }
     
     void update(void (*bcmCallback)(Button *headlightWasherButton, Bcm *bcm)) {
@@ -31,9 +102,25 @@ class Bcm {
     }
   private:
     
-    Button *headlightWasherButton     = new Button(new DigitalInput(12, 20, LOW, INPUT));
-    TimedOutput *headlightWasherRelay = new TimedOutput(new DigitalOutput(11));
-    DigitalOutput *RearFogRelay       = new DigitalOutput(18, HIGH);
+    CanInput *FLDoorSensor              = new CanInput(0x060D, 0, B00001000);
+    CanInput *FRDoorSensor              = new CanInput(0x060D, 0, B00010000);
+    CanInput *RLDoorSensor              = new CanInput(0x060D, 0, B00100000);
+    CanInput *RRDoorSensor              = new CanInput(0x060D, 0, B01000000);
+    CanInput *backDoorSensor            = new CanInput(0x0358, 2, B00000001);
+
+    DigitalInput  *BluetoothConnected   = new DigitalInput(4, 20, HIGH, INPUT);
+    DigitalInput  *StartButtonStatus    = new DigitalInput(20, 20, HIGH, INPUT);
+    DigitalInput  *ClutchSwitch         = new DigitalInput(17, 20, HIGH, INPUT);
+    DigitalOutput *StartFreeRelay       = new DigitalOutput(2, HIGH);  // If Smartphone connected->switch RLY
+    DigitalOutput *WindowDown           = new DigitalOutput(5, HIGH);
+    DigitalOutput *WindowUp             = new DigitalOutput(6, HIGH);
+    DigitalOutput *NatsRLY              = new DigitalOutput(9, HIGH);  // If Smartphone connected->switch RLY
+    DigitalOutput *DoorSwitch           = new DigitalOutput(10, HIGH); // its for the Keyless Entry Modul
+    Button *headlightWasherButton       = new Button(new DigitalInput(12, 20, LOW, INPUT));
+    TimedOutput *headlightWasherRelay   = new TimedOutput(new DigitalOutput(11));
+    DigitalOutput *RearFogRelay         = new DigitalOutput(18, HIGH);
+    DigitalOutput *statusLED            = new DigitalOutput(13, HIGH);
+    
 };
 
 #endif
