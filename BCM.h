@@ -76,7 +76,7 @@ class Bcm {
       return this->DoorSwitch->getState() == HIGH;
     }
     void setDoorSwitch(boolean newState) {
-      this->DoorSwitch->toggle(!this->DoorSwitch->getState());
+      this->DoorSwitch->toggle(newState);
     }
     
     
