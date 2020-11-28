@@ -55,19 +55,19 @@ class Bcm {
       return this->statusLED->getState() == HIGH;
     }
     void setstatusLED(boolean newState) {
-      this->statusLED->toggle(!this->statusLED->getState());
+      this->statusLED->toggle(newState);
     }
     boolean isNatsRlyActive() {
       return this->NatsRLY->getState() == HIGH;
     }
     void setNatsRLY(boolean newState) {
-      this->NatsRLY->toggle(!this->NatsRLY->getState());
+      this->NatsRLY->toggle(newState);
     }
     boolean isStartFreeRelayActive(){
       return this->StartFreeRelay->getState() == HIGH;
     }
     void setStartFreeRelay(boolean newState) {
-      this->StartFreeRelay->toggle(!this->StartFreeRelay->getState());
+      this->StartFreeRelay->toggle(newState);
     }
   /////////////////////////////////////////////////////////////////    
  ////////// Door Switch for Keyless Entry //////////////////////// 
@@ -85,10 +85,10 @@ class Bcm {
     }
 
     void updateCan(CAN_message_t canMessage) {
-      this->FLDoorSensor->update(canMessage);
-      this->FRDoorSensor->update(canMessage);
-      this->RLDoorSensor->update(canMessage);
-      this->RRDoorSensor->update(canMessage);
+      this->FLDoorSensor->updateCan(canMessage);
+      this->FRDoorSensor->updateCan(canMessage);
+      this->RLDoorSensor->updateCan(canMessage);
+      this->RRDoorSensor->updateCan(canMessage);
            
     }
     
@@ -96,6 +96,7 @@ class Bcm {
            
       this->headlightWasherButton->update();
       this->headlightWasherRelay->update();
+      this->BluetoothConnected->getState();
 
       
       bcmCallback(this->headlightWasherButton, this);
@@ -116,7 +117,7 @@ class Bcm {
     DigitalOutput *WindowUp             = new DigitalOutput(6, HIGH);
     DigitalOutput *NatsRLY              = new DigitalOutput(9, HIGH);  // If Smartphone connected->switch RLY
     DigitalOutput *DoorSwitch           = new DigitalOutput(10, HIGH); // its for the Keyless Entry Modul
-    Button *headlightWasherButton       = new Button(new DigitalInput(12, 20, LOW, INPUT));
+    Button *headlightWasherButton       = new Button(new DigitalInput(12, 20, HIGH, INPUT_PULLUP));
     TimedOutput *headlightWasherRelay   = new TimedOutput(new DigitalOutput(11));
     DigitalOutput *RearFogRelay         = new DigitalOutput(18, HIGH);
     DigitalOutput *statusLED            = new DigitalOutput(13, HIGH);

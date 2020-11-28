@@ -26,7 +26,7 @@ uint8_t clearFlag(uint8_t value, uint8_t mask);
 
 DigitalInput pnpSwitch(21, 20, HIGH, INPUT);
 DigitalInput reverseSwitch(3, 20, HIGH, INPUT);
-//DigitalInput BluetoothConnected(4, 20, HIGH, INPUT);
+Button BluetoothConnected(new DigitalInput(4, 20, HIGH, INPUT));
 //DigitalInput StartButtonStatus(20, 20, HIGH, INPUT);
 //DigitalInput ClutchSwitch(17, 20, HIGH, INPUT);
 //DigitalOutput *StartFreeRelay       = new DigitalOutput(2, HIGH);  // If Smartphone connected->switch RLY
@@ -34,7 +34,7 @@ DigitalInput reverseSwitch(3, 20, HIGH, INPUT);
 //DigitalOutput *WindowUp             = new DigitalOutput(6, HIGH);
 //DigitalOutput *NatsRLY              = new DigitalOutput(9, HIGH);  // If Smartphone connected->switch RLY
 //DigitalOutput *DoorSwitch           = new DigitalOutput(10, HIGH); // its for the Keyless Entry Modul
-Button rearFogButton(new AnalogInput(A5, 220, 400), 0);
+Button rearFogButton(new AnalogInput(A5, 550, 700), 0);
 Button ClutchSwitchButton(new DigitalInput(17, 20, HIGH, INPUT));
 
 void updateRearFog();
@@ -95,7 +95,7 @@ void setup() {
   carduino.begin();
 
   Serial.begin(9600);
-  Serial2.begin(9600);
+  //Serial2.begin(9600);
 
   can.setup(500000, 500000);
 
@@ -221,13 +221,20 @@ void loop() {
 
     } 
   can.update(canCallback);
-  can.updateCan();     
+    
 
   bcm.update(updateBcm); 
 
-  //shiftGauge(); 
+  shiftGauge(); 
   
   updateRearFog();
+
+  ClutchSwitchButton.update();
+  BluetoothConnected.update();
+ 
+  
+   
+  
 
 
    
@@ -325,6 +332,16 @@ void loop() {
 
 
 void canCallback(const CAN_message_t &message) {
+
+  headlightSensor.updateCan(message);
+  runningLightSensor.updateCan(message);
+  frontFogLight.updateCan(message);
+  rearFogLight.updateCan(message);
+  handbrakeSensor.updateCan(message);
+  ignitionAcc.updateCan(message);
+  ignitionOn.updateCan(message);
+  brakeSensor.updateCan(message);
+   
   switch (message.id) {
     case (0x023D):{
       uint16_t rpm = combineUint16(message.buf[3], message.buf[4]) * 2.3 * 10;
@@ -376,25 +393,26 @@ void canCallback(const CAN_message_t &message) {
 void shiftGauge(){
   if (ignitionAcc.getState() || ignitionOn.getState()){ 
 
-    if(!handbrakeSensor.getState()){
+    if(handbrakeSensor.getState()){
+      message0421.buf[0] = B00001000; // P
+      can.write(message0421);
+    }
 
-      if(!reverseSwitch.getState() && pnpSwitch.getState()){
-        message0421.buf[0] = B00101000; // D S
-        message0421.buf[0] = B00001001; // O/D OFF ---> Sport
+      if(pnpSwitch.getState()){
+        //message0421.buf[0] = B00101000; // D S
+        
+        message0421.buf[0] = B00101001; // O/D OFF ---> Sport
         can.write(message0421);
-      }else if(!pnpSwitch.getState() && reverseSwitch.getState()){
-        if(handbrakeSensor.getState()){
-          message0421.buf[0] = B00001000; // P
-          can.write(message0421);  
-        }else{
+      };
+      if(!pnpSwitch.getState() && reverseSwitch.getState()){
         message0421.buf[0] = B00010000; // R
         can.write(message0421);
-        }
       }
-    }
-  }   message0421.buf[0] = B00011000; // N
-      can.write(message0421);  
-}
+      
+    }message0421.buf[0] = B00011000; // N
+      can.write(message0421); 
+  }    
+
 
 void onCarduinoSerialTimeout() {
   carduino.end();
@@ -433,14 +451,16 @@ uint8_t clearFlag(uint8_t value, uint8_t mask) {
 
 void updateRearFog(){
   rearFogButton.update();
-  
+  int fog = A5;
+  fog = analogRead(A5);
+  Serial.println(fog);
 
   if (headlightSensor.getState() && frontFogLight.getState()){
-    if (rearFogButton.wasHeldFor(500)) {
+    if (rearFogButton.wasHeldFor(400)) {
       bcm.toggleRearFogLight();
       message0358.buf[4] = B10000000; // Rear Fog Lamp
       can.write(message0358);
-    }
+     }
   }
   if (!frontFogLight.getState() && bcm.isRearFogLightActive()) {
     bcm.toggleRearFogLight();
@@ -451,15 +471,24 @@ void updateBcm(Button *headlightWasherButton, Bcm *bcm) {
   
 ////////// BluetoothConneted is a safety function///////////////////////
   // you can only start the car if Bluetooth is connected  
-  
-    if (ClutchSwitchButton.isPressed()){
-      bcm->setstatusLED(HIGH);
-      bcm->setStartFreeRelay(true);
+    
+    if (BluetoothConnected.isHeld()){
       bcm->setNatsRLY(true);
+      
+      }else{
+        bcm->setNatsRLY(false);
+        message0351.buf[5] = B00001000; //  NO KEY Detected
+        can.write(message0351);
+        };
+        
+    if (ClutchSwitchButton.isHeld() && brakeSensor.getState()){
+      bcm->setstatusLED(true);
       bcm->setStartFreeRelay(true);
+      //bcm->setNatsRLY(true);
+      
     }else{
-    //bcm->setstatusLED(LOW);
-    bcm->setNatsRLY(false);
+    bcm->setstatusLED(false);
+    //bcm->setNatsRLY(false);
     bcm->setStartFreeRelay(false);
     
   }
