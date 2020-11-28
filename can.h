@@ -32,7 +32,7 @@ class CanInput {
     virtual boolean getState() { 
       return this->state;
     }
-    void update(const CAN_message_t &message) {
+    void updateCan(const CAN_message_t &message) {
       if (message.id == this->canId) {
         this->state = message.len >= this->byteNumber + 1 && (message.buf[this->byteNumber] & this->bitMask) == this->bitMask;
       }
@@ -48,8 +48,8 @@ class CanInput {
 class Can {
 public:
     Can(Stream * serial) {
-        this->sourceCan = new FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16>();
-        this->targetCan = new FlexCAN_T4<CAN0, RX_SIZE_256, TX_SIZE_16>();
+        this->sourceCan = new FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16>();
+        this->targetCan = new FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16>();
         this->serial = serial;
     }
     ~Can() {
@@ -146,8 +146,8 @@ public:
         this->targetCan->write(message);
     }
 private:
-    FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> * sourceCan;
-    FlexCAN_T4<CAN0, RX_SIZE_256, TX_SIZE_16> * targetCan;
+    FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> * sourceCan;
+    FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> * targetCan;
     CAN_message_t msg;
 
     Stream * serial;

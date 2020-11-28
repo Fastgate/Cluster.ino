@@ -1,3 +1,4 @@
+
 #include <Arduino.h>
 
 #include <carduinotest.h>
@@ -23,9 +24,18 @@ uint8_t setFlag(uint8_t value, uint8_t mask);
 uint8_t clearFlag(uint8_t value, uint8_t mask);
 
 
-DigitalInput pnpSwitch(2, 20, HIGH, INPUT);
+DigitalInput pnpSwitch(21, 20, HIGH, INPUT);
 DigitalInput reverseSwitch(3, 20, HIGH, INPUT);
+//DigitalInput BluetoothConnected(4, 20, HIGH, INPUT);
+//DigitalInput StartButtonStatus(20, 20, HIGH, INPUT);
+//DigitalInput ClutchSwitch(17, 20, HIGH, INPUT);
+//DigitalOutput *StartFreeRelay       = new DigitalOutput(2, HIGH);  // If Smartphone connected->switch RLY
+//DigitalOutput *WindowDown           = new DigitalOutput(5, HIGH);
+//DigitalOutput *WindowUp             = new DigitalOutput(6, HIGH);
+//DigitalOutput *NatsRLY              = new DigitalOutput(9, HIGH);  // If Smartphone connected->switch RLY
+//DigitalOutput *DoorSwitch           = new DigitalOutput(10, HIGH); // its for the Keyless Entry Modul
 Button rearFogButton(new AnalogInput(A5, 220, 400), 0);
+Button ClutchSwitchButton(new DigitalInput(17, 20, HIGH, INPUT));
 
 void updateRearFog();
 void updateBcm(Button *headlightWasherButton, Bcm *bcm);
@@ -39,6 +49,7 @@ CanInput rearFogLight       (0x0358, 4, B10000000);
 CanInput handbrakeSensor    (0x06F1, 4, B00010000);
 CanInput ignitionAcc        (0x060D, 1, B00000010);
 CanInput ignitionOn         (0x060D, 1, B00000110);
+CanInput brakeSensor        (0x06F1, 4, B01000000);
 
 Can can(&Serial);
 Carduino carduino(&Serial, onCarduinoSerialEvent, onCarduinoSerialTimeout);
@@ -77,9 +88,14 @@ CAN_message_t message06F1;
 
 
 
+
+
 void setup() {
 
   carduino.begin();
+
+  Serial.begin(9600);
+  Serial2.begin(9600);
 
   can.setup(500000, 500000);
 
@@ -111,7 +127,7 @@ void setup() {
   can.addCanId(0x0580);
 
   can.addCanId(0x0625);
-  //can.addCanId(0x060D);
+  can.addCanId(0x060D);
   can.addCanId(0x0682);
   can.addCanId(0x06E2);
   can.addCanId(0x06F1);
@@ -203,13 +219,31 @@ void loop() {
      
       can.update(canCallback);
 
-    }    
+    } 
+  can.update(canCallback);
+  can.updateCan();     
 
-  bcm.update(updateBcm);  
+  bcm.update(updateBcm); 
+
+  //shiftGauge(); 
   
   updateRearFog();
 
 
+   
+/*
+  if(Serial2.available())  // If the bluetooth sent any characters
+  {
+    // Send any characters the bluetooth prints to the serial monitor
+    Serial.print((char)Serial2.read());  
+  }
+  if(Serial.available())  // If stuff was typed in the serial monitor
+  {
+    // Send any characters the Serial monitor prints to the bluetooth
+    Serial2.print((char)Serial.read());
+  }
+
+*/
    
       
 //////////////////////// ID 0x0351 ///////////////////////////      
@@ -307,7 +341,7 @@ void canCallback(const CAN_message_t &message) {
     //case (0x060D):
 
       
-      message0351.buf[5] = B00001111; //Push Brake and Start Button to drive
+      //message0351.buf[5] = B00001111; //Push Brake and Start Button to drive
       //message0358.buf[4] = B10000000; // Rear Fog Lamp
       //message0358.buf[1] = B00011000;
       //message0358.buf[0] = B00000001;
@@ -343,7 +377,7 @@ void shiftGauge(){
   if (ignitionAcc.getState() || ignitionOn.getState()){ 
 
     if(!handbrakeSensor.getState()){
-      
+
       if(!reverseSwitch.getState() && pnpSwitch.getState()){
         message0421.buf[0] = B00101000; // D S
         message0421.buf[0] = B00001001; // O/D OFF ---> Sport
@@ -352,14 +386,16 @@ void shiftGauge(){
         if(handbrakeSensor.getState()){
           message0421.buf[0] = B00001000; // P
           can.write(message0421);  
-        }
+        }else{
         message0421.buf[0] = B00010000; // R
         can.write(message0421);
+        }
       }
     }
   }   message0421.buf[0] = B00011000; // N
       can.write(message0421);  
 }
+
 void onCarduinoSerialTimeout() {
   carduino.end();
   delay(1000);
@@ -413,6 +449,31 @@ void updateRearFog(){
 
 void updateBcm(Button *headlightWasherButton, Bcm *bcm) {
   
+////////// BluetoothConneted is a safety function///////////////////////
+  // you can only start the car if Bluetooth is connected  
+  
+    if (ClutchSwitchButton.isPressed()){
+      bcm->setstatusLED(HIGH);
+      bcm->setStartFreeRelay(true);
+      bcm->setNatsRLY(true);
+      bcm->setStartFreeRelay(true);
+    }else{
+    //bcm->setstatusLED(LOW);
+    bcm->setNatsRLY(false);
+    bcm->setStartFreeRelay(false);
+    
+  }
+
+  
+
+//////// Keyless Entry Door switch Control /////////////
+  
+  if (bcm->isAnyDoorOpen()){
+    bcm->setDoorSwitch(true);
+  }
+  if (!bcm->isAnyDoorOpen()){
+    bcm->setDoorSwitch(false);
+  }
 
   // headlight washer
   if (headlightSensor.getState() && headlightWasherButton->wasHeldFor(500)) {
