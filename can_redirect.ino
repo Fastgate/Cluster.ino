@@ -11,7 +11,7 @@
 #define combineUint16(L, H) (H * 256 + L)
 #define highUint16(V) (V >> 8)
 #define lowUint16(V) (V & 0xFF)
-
+#define CAN_WRITE_INTERVAL 100;
 
 void canCallback(const CAN_message_t &message);
 void onCarduinoSerialTimeout();
@@ -53,6 +53,8 @@ CanInput brakeSensor        (0x06F1, 4, B01000000);
 
 Can can(&Serial);
 Carduino carduino(&Serial, onCarduinoSerialEvent, onCarduinoSerialTimeout);
+
+uint32_t lastCanWrite = 0;
 
 /////////////////////////This Can message are modify://///////////////////////// 
 // ID 0x0180
@@ -121,7 +123,7 @@ void setup() {
   can.addCanId(0x0355);
   can.addCanId(0x0358);
   //can.addCanId(0x0385);
-  can.addCanId(0x0421);
+  //can.addCanId(0x0421);
   can.addCanId(0x0512);
   can.addCanId(0x054C);
   can.addCanId(0x0580);
@@ -209,19 +211,13 @@ void setup() {
   message06F1.id = 0x06F1;
   message06F1.len = 8;
 
-can.startSniffer();
-
-
+  can.startSniffer();
 }
 
 void loop() {
   if (carduino.update()) {
-     
-      can.update(canCallback);
-
-    } 
-  can.update(canCallback);
-    
+    can.update(canCallback);
+  }   
 
   bcm.update(updateBcm); 
 
@@ -232,7 +228,10 @@ void loop() {
   ClutchSwitchButton.update();
   BluetoothConnected.update();
  
-  
+  if (millis() - lastCanWrite > CAN_WRITE_INTERVAL) {
+    canWrite();
+    lastCanWrite = millis();
+  }
    
   
 
@@ -330,7 +329,6 @@ void loop() {
   
 }
 
-
 void canCallback(const CAN_message_t &message) {
 
   headlightSensor.updateCan(message);
@@ -390,29 +388,24 @@ void canCallback(const CAN_message_t &message) {
   }
 }
 
+void canWrite() {
+  can.write(message0358);
+  can.write(message0421);
+}
+
 void shiftGauge(){
   if (ignitionAcc.getState() || ignitionOn.getState()){ 
-
-    if(handbrakeSensor.getState()){
+    if (handbrakeSensor.getState()) { // Handbrake is pulled
       message0421.buf[0] = B00001000; // P
-      can.write(message0421);
+    } else if (reverseSwitch.getState()) { // Gear switch in reverse
+      message0421.buf[0] = B00010000; // R
+    } else if (pnpSwitch.getState()) { // Gear switch in a gear
+      message0421.buf[0] = B00101001; // O/D OFF --> Sport
+    } else { // Gear switch in neutral
+      message0421.buf[0] = B00011000; // N  
     }
-
-      if(pnpSwitch.getState()){
-        //message0421.buf[0] = B00101000; // D S
-        
-        message0421.buf[0] = B00101001; // O/D OFF ---> Sport
-        can.write(message0421);
-      };
-      if(!pnpSwitch.getState() && reverseSwitch.getState()){
-        message0421.buf[0] = B00010000; // R
-        can.write(message0421);
-      }
-      
-    }message0421.buf[0] = B00011000; // N
-      can.write(message0421); 
-  }    
-
+  } 
+}
 
 void onCarduinoSerialTimeout() {
   carduino.end();
@@ -458,12 +451,16 @@ void updateRearFog(){
   if (headlightSensor.getState() && frontFogLight.getState()){
     if (rearFogButton.wasHeldFor(400)) {
       bcm.toggleRearFogLight();
-      message0358.buf[4] = B10000000; // Rear Fog Lamp
-      can.write(message0358);
-     }
+    }
   }
   if (!frontFogLight.getState() && bcm.isRearFogLightActive()) {
     bcm.toggleRearFogLight();
+  }
+
+  if (bcm.isRearFogLightActive()) {
+    message0358.buf[4] = B10000000; // Rear Fog Lamp
+  } else {
+    message0358.buf[4] = B00000000; // Rear Fog Lamp
   }
 }
 
