@@ -17,6 +17,7 @@ void canCallback(const CAN_message_t &message);
 void onCarduinoSerialTimeout();
 void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer);
 void shiftGauge();
+void canWrite();
 
 u_int8_t transferFlag(uint8_t sourceValue, uint8_t sourceMask, uint8_t targetValue, uint8_t targetMask);
 bool readFlag(uint8_t value, uint8_t mask);
