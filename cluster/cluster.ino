@@ -11,7 +11,7 @@
 #define combineUint16(L, H) (H * 256 + L)
 #define highUint16(V) (V >> 8)
 #define lowUint16(V) (V & 0xFF)
-#define CAN_WRITE_INTERVAL 100;
+#define CAN_WRITE_INTERVAL 100
 
 void canCallback(const CAN_message_t &message);
 void onCarduinoSerialTimeout();
