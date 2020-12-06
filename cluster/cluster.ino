@@ -11,7 +11,7 @@
 #define combineUint16(L, H) (H * 256 + L)
 #define highUint16(V) (V >> 8)
 #define lowUint16(V) (V & 0xFF)
-#define CAN_WRITE_INTERVAL 100
+#define CAN_WRITE_INTERVAL 200
 
 void canCallback(const CAN_message_t &message);
 void onCarduinoSerialTimeout();
@@ -122,7 +122,7 @@ void setup() {
   can.addCanId(0x0351);
   can.addCanId(0x0354);
   can.addCanId(0x0355);
-  can.addCanId(0x0358);
+  //can.addCanId(0x0358);
   //can.addCanId(0x0385);
   //can.addCanId(0x0421);
   can.addCanId(0x0512);
@@ -219,6 +219,7 @@ void loop() {
   if (carduino.update()) {
     can.update(canCallback);
   }   
+  can.update(canCallback);
 
   bcm.update(updateBcm); 
 
